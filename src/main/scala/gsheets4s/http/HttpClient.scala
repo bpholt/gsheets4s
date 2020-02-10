@@ -7,10 +7,12 @@ import cats.effect.Sync
 import cats.effect.concurrent.Ref
 import cats.syntax.flatMap._
 import cats.syntax.functor._
+import cats.syntax.show._
 import hammock._
 import hammock.apache.ApacheInterpreter
 import hammock.circe._
 import io.circe.{Encoder, Decoder}
+import io.lemonlabs.uri.Url
 
 import model.{Credentials, GsheetsError}
 
@@ -39,14 +41,14 @@ class HammockRequester[F[_]: Sync] extends HttpRequester[F] {
 class HttpClient[F[_]: Monad](creds: Ref[F, Credentials], requester: HttpRequester[F])(
     implicit urls: GSheets4sDefaultUrls) {
   def get[O](
-    path: String,
+    path: Url,
     params: List[(String, String)] = List.empty)(
     implicit d: Decoder[O]): F[Either[GsheetsError, O]] =
       req(token => requester
         .request[Either[GsheetsError, O]](urlBuilder(token, path, params), Method.GET))
 
   def put[I, O](
-    path: String,
+    path: Url,
     body: I,
     params: List[(String, String)] = List.empty)(
     implicit e: Encoder[I], d: Decoder[O]): F[Either[GsheetsError, O]] =
@@ -84,7 +86,7 @@ class HttpClient[F[_]: Monad](creds: Ref[F, Credentials], requester: HttpRequest
 
   private def urlBuilder(
     accessToken: String,
-    path: String,
+    path: Url,
     params: List[(String, String)]): Uri =
-      (urls.baseUrl / path) ? NonEmptyList(("access_token" -> accessToken), params)
+      (urls.baseUrl / path.show) ? NonEmptyList(("access_token" -> accessToken), params)
 }
